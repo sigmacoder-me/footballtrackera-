@@ -1,0 +1,149 @@
+import os
+import json
+
+class Player:
+    def __init__(self, jersey, name, team, position):
+        self.jersey = jersey
+        self.name = name
+        self.team = team
+        self.position = position
+        self.passacc = 0.0
+        self.duelswon = 0.0
+
+    def update_stats(self, total_passes, successful_passes, total_duels, duels_won):
+        self.passacc = round((successful_passes / total_passes) * 100, 2) if total_passes > 0 else 0.0
+        self.duelswon = round((duels_won / total_duels) * 100, 2) if total_duels > 0 else 0.0
+
+    def rating(self):
+        if self.passacc >= 90 and self.duelswon >= 75:
+            return "⭐ Superstar"
+        elif self.passacc >= 80 or self.duelswon >= 65:
+            return "👍 Pro Level"
+        elif self.passacc >= 60 or self.duelswon >= 50:
+            return "🔄 Reliable Player"
+        else:
+            return "⚡ Needs Improvement"
+
+    def to_dict(self):
+        return {
+            'jersey': self.jersey,
+            'info': {
+                'name': self.name,
+                'team': self.team,
+                'posis': self.position,
+                'passacc': self.passacc,
+                'duelswon': self.duelswon
+            }
+        }
+
+    @staticmethod
+    def from_dict(data):
+        info = data['info']
+        player = Player(data['jersey'], info['name'], info['team'], info['posis'])
+        player.passacc = info.get('passacc', 0.0)
+        player.duelswon = info.get('duelswon', 0.0)
+        return player
+
+    def __str__(self):
+        return (
+            f"Jersey #{self.jersey} | Name: {self.name}, Team: {self.team}, Pos: {self.position}\n"
+            f"Pass Acc: {self.passacc}% | Duels Won: {self.duelswon}% | Rating: {self.rating()}"
+        )
+
+
+class TeamManager:
+    def __init__(self):
+        self.players = []
+        self.load_data()
+
+    def load_data(self):
+        if os.path.exists("players.json"):
+            with open("players.json", "r") as f:
+                raw = json.load(f)
+                self.players = [Player.from_dict(p) for p in raw]
+            print("📂 Player data loaded.")
+        else:
+            print("⚠️ No saved player data found.")
+
+    def save_data(self):
+        with open("players.json", "w") as f:
+            json.dump([p.to_dict() for p in self.players], f, indent=2)
+        print("💾 Data saved to players.json")
+
+    def add_player(self):
+        while True:
+            jersey = input("Jersey Number: ")
+            if not jersey.isdigit():
+                print("Please enter a valid number.")
+                continue
+            jersey = int(jersey)
+
+            if any(p.jersey == jersey for p in self.players):
+                print("Number already exists!")
+                continue
+
+            name = input("Name: ")
+            team = input("Team: ")
+            pos = input("Position: ")
+
+            player = Player(jersey, name, team, pos)
+            self.players.append(player)
+            print(f"\nPlayer {jersey}, {name.capitalize()} added. Welcome to the team.")
+            break
+
+    def view_player(self):
+        jersey = input("Enter Jersey Number to view: ")
+        found = False
+        for p in self.players:
+            if str(p.jersey) == jersey:
+                print("\n" + str(p))
+                found = True
+                break
+        if not found:
+            print("❌ Player not found.")
+
+    def update_stats(self):
+        jersey = input("Enter Jersey Number to update: ")
+        for p in self.players:
+            if str(p.jersey) == jersey:
+                try:
+                    print(f"\nUpdating stats for {p.name} (Jersey #{jersey})")
+                    total_passes = int(input("Total Passes Attempted: "))
+                    successful_passes = int(input("Successful Passes: "))
+                    total_duels = int(input("Total Duels Attempted: "))
+                    duels_won = int(input("Duels Won: "))
+
+                    p.update_stats(total_passes, successful_passes, total_duels, duels_won)
+
+                    print(f"\nUpdated Stats:\n{p}")
+                    self.save_data()
+                except ValueError:
+                    print("❌ Please enter valid numbers.")
+                return
+        print("❌ Player not found.")
+
+    def run(self):
+        while True:
+            print("\nPlayer Management Menu:")
+            print("1) Add Player")
+            print("2) View Player Info")
+            print("3) Update Player Stats")
+            print("4) Exit")
+
+            choice = input("Select an option (1–4): ")
+            if choice == '1':
+                self.add_player()
+            elif choice == '2':
+                self.view_player()
+            elif choice == '3':
+                self.update_stats()
+            elif choice == '4':
+                print("👋 Goodbye!")
+                break
+            else:
+                print("❌ Invalid option. Choose 1–4.")
+
+
+if __name__ == "__main__":
+    manager = TeamManager()
+    manager.run()
